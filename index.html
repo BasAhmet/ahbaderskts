@@ -1,421 +1,125 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ders ve Konu Takip Sistemi</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        .editable-cell {
-            transition: background-color 0.2s;
-            outline: none;
-            min-width: 80px;
-        }
-        .editable-cell:hover, .editable-cell:focus {
-            background-color: #fef9c3;
-            cursor: text;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ders Takip Sistemi</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans min-h-screen">
-
-    <div class="max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
-        <!-- Hata / Durum Bildirim Kutusu -->
-        <div id="statusBanner" class="hidden mb-4 p-4 rounded-xl text-sm font-medium"></div>
-
-        <h1 class="text-3xl font-bold text-slate-700 mb-8 text-center">
-            <i class="fas fa-book-open mr-2 text-indigo-500"></i>Ders ve Konu Takip Sistemi
-        </h1>
-
-        <!-- DERS PROGRAMI BÖLÜMÜ -->
-        <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 mb-8">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-semibold text-slate-700">
-                    <i class="far fa-calendar-alt mr-2 text-indigo-500"></i>Ders Programım
-                </h2>
-                <div class="text-xs text-amber-600 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
-                    <i class="fas fa-edit mr-1"></i> Tablodaki yazılara tıklayarak değiştirebilirsiniz
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- Hafta İçi -->
-                <div class="overflow-x-auto">
-                    <h3 class="font-medium text-slate-700 bg-slate-100 p-2 text-center border-t border-l border-r border-slate-300 rounded-t-lg">Hafta İçi</h3>
-                    <table class="w-full text-center border-collapse border border-slate-300 text-sm">
-                        <thead>
-                            <tr class="bg-slate-50">
-                                <th class="border border-slate-300 p-2 font-semibold">Saat / Gün</th>
-                                <th class="border border-slate-300 p-2 font-semibold">Pazartesi</th>
-                                <th class="border border-slate-300 p-2 font-semibold">Salı</th>
-                                <th class="border border-slate-300 p-2 font-semibold">Çarşamba</th>
-                                <th class="border border-slate-300 p-2 font-semibold">Perşembe</th>
-                                <th class="border border-slate-300 p-2 font-semibold">Cuma</th>
-                            </tr>
-                        </thead>
-                        <tbody id="weekdayTableBody"></tbody>
-                    </table>
-                </div>
-
-                <!-- Hafta Sonu -->
-                <div class="overflow-x-auto">
-                    <h3 class="font-medium text-slate-700 bg-slate-100 p-2 text-center border-t border-l border-r border-slate-300 rounded-t-lg">Hafta Sonu</h3>
-                    <table class="w-full text-center border-collapse border border-slate-300 text-sm">
-                        <thead>
-                            <tr class="bg-slate-50">
-                                <th class="border border-slate-300 p-2 font-semibold">Saat / Gün</th>
-                                <th class="border border-slate-300 p-2 font-semibold">Cumartesi</th>
-                                <th class="border border-slate-300 p-2 font-semibold">Pazar</th>
-                            </tr>
-                        </thead>
-                        <tbody id="weekendTableBody"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- TAKİP SİSTEMİ BÖLÜMÜ -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="md:col-span-1 space-y-6">
-                <!-- Sınıf Yönetimi Kartı -->
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-                    <h2 class="text-xl font-semibold mb-4 text-slate-700">Sınıf Yönetimi</h2>
-                    <div class="flex gap-2 mb-4">
-                        <input type="text" id="newClassInput" placeholder="Örn: 12SAY1" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        <button id="addClassBtn" class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg transition-colors"><i class="fas fa-plus"></i></button>
-                    </div>
-                    <ul id="classList" class="space-y-2 max-h-40 overflow-y-auto"></ul>
-                </div>
-
-                <!-- Yeni Kayıt Formu -->
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-                    <h2 class="text-xl font-semibold mb-4 text-slate-700">Yeni Ders Kaydı</h2>
-                    <form id="logForm" class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-slate-600 mb-1">Sınıf Seçin</label>
-                            <select id="classSelect" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                <option value="">Önce sınıf ekleyin...</option>
-                            </select>
-                        </div>
-                        
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-slate-600 mb-1">Tarih</label>
-                                <input type="date" id="dateInput" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-slate-600 mb-1">Ders Saati</label>
-                                <input type="number" id="periodInput" min="1" placeholder="Kaç ders?" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-slate-600 mb-1">İşlenen Konu</label>
-                            <input type="text" id="topicInput" placeholder="Örn: Limit ve Süreklilik" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-slate-600 mb-1">Kalınan Sayfa</label>
-                            <input type="text" id="pageInput" placeholder="Örn: Sayfa 45, Soru 3" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-slate-600 mb-1">Ödevlendirme</label>
-                            <textarea id="homeworkInput" rows="2" placeholder="Verilen ödevler..." class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
-                        </div>
-
-                        <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-medium py-2 rounded-lg transition-colors">
-                            Kaydet
-                        </button>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Sağ Panel: Kayıt Geçmişi -->
-            <div class="md:col-span-2">
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 h-full">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-xl font-semibold text-slate-700">Ders Geçmişi</h2>
-                        <button id="clearLogsBtn" class="text-sm text-red-500 hover:text-red-700"><i class="fas fa-trash-alt mr-1"></i>Tümünü Temizle</button>
-                    </div>
-                    
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm">
-                                    <th class="p-3 font-semibold rounded-tl-lg">Tarih</th>
-                                    <th class="p-3 font-semibold">Sınıf</th>
-                                    <th class="p-3 font-semibold">Saat</th>
-                                    <th class="p-3 font-semibold">Konu & Sayfa</th>
-                                    <th class="p-3 font-semibold">Ödev</th>
-                                    <th class="p-3 font-semibold rounded-tr-lg">İşlem</th>
-                                </tr>
-                            </thead>
-                            <tbody id="logsTableBody" class="text-sm"></tbody>
-                        </table>
-                    </div>
-                    
-                    <div id="emptyState" class="hidden flex flex-col items-center justify-center py-10 text-slate-400">
-                        <i class="fas fa-clipboard-list text-4xl mb-3"></i>
-                        <p>Henüz bir ders kaydı bulunmuyor.</p>
-                    </div>
-                </div>
-            </div>
-
-        </div>
+<body class="bg-slate-100 min-h-screen p-4 md:p-8">
+  <div class="max-w-4xl mx-auto space-y-6">
+    
+    <!-- Başlık ve Yeni Sınıf Ekleme -->
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <h1 class="text-2xl font-bold text-slate-800">Sınıf Ders Takip Takibi</h1>
+      <form id="addClassForm" class="flex gap-2">
+        <input type="text" id="classNameInput" placeholder="Yeni Sınıf Adı (Örn: 9-A)" required class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition font-medium">Sınıf Ekle</button>
+      </form>
     </div>
 
-    <!-- FIREBASE INTEGRATION MODULE -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { 
-            getFirestore, 
-            doc, 
-            setDoc, 
-            onSnapshot 
-        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    <!-- Sınıflar Listesi Container -->
+    <div id="classList" class="grid gap-6 md:grid-cols-2">
+      <!-- Firestore'dan gelen veriler buraya yüklenecek -->
+    </div>
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyActPpb2TrOqKV4OwnxjJ36n33Xoh8ai0g",
-            authDomain: "ahbaderskts.firebaseapp.com",
-            projectId: "ahbaderskts",
-            storageBucket: "ahbaderskts.firebasestorage.app",
-            messagingSenderId: "813687362214",
-            appId: "1:813687362214:web:d8f447b6eb579aacf4da67",
-            measurementId: "G-6HQPQSTJBN"
-        };
+  </div>
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-        const mainDocRef = doc(db, "appData", "teacherDashboard");
+    const firebaseConfig = {
+      apiKey: "AIzaSyActPpb2TrOqKV4OwnxjJ36n33Xoh8ai0g",
+      authDomain: "ahbaderskts.firebaseapp.com",
+      projectId: "ahbaderskts",
+      storageBucket: "ahbaderskts.firebasestorage.app",
+      messagingSenderId: "813687362214",
+      appId: "1:813687362214:web:d8f447b6eb579aacf4da67",
+      measurementId: "G-6HQPQSTJBN"
+    };
 
-        function showStatus(message, isError = false) {
-            const banner = document.getElementById('statusBanner');
-            banner.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
-            if (isError) {
-                banner.classList.add('bg-red-100', 'text-red-700');
-                banner.innerHTML = `<i class="fas fa-exclamation-triangle mr-2"></i><strong>Hata:</strong> ${message}`;
-            } else {
-                banner.classList.add('bg-green-100', 'text-green-700');
-                banner.innerHTML = `<i class="fas fa-check-circle mr-2"></i>${message}`;
-                setTimeout(() => banner.classList.add('hidden'), 3000);
-            }
-        }
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const classesRef = collection(db, "classes");
 
-        const defaultWeekday = [
-            ["15:25-16:00", "-", "-", "-", "-", "-"],
-            ["16:05-16:40", "-", "-", "-", "-", "-"],
-            ["16:45-17:20", "11SAY1<br><span class='text-xs text-slate-500'>Mat</span>", "-", "-", "-", "-"],
-            ["17:25-18:00", "11SAY1<br><span class='text-xs text-slate-500'>Mat</span>", "-", "-", "12TM2<br><span class='text-xs text-slate-500'>Geo</span>", "-"],
-            ["18:05-18:40", "12SAY1<br><span class='text-xs text-slate-500'>Mat-TYT</span>", "-", "-", "12TM1<br><span class='text-xs text-slate-500'>Geo</span>", "-"],
-            ["18:45-19:20", "12SAY1<br><span class='text-xs text-slate-500'>Geo</span>", "-", "-", "12TM1<br><span class='text-xs text-slate-500'>Geo</span>", "-"]
-        ];
+    // Canlı Veri Dinleme
+    onSnapshot(classesRef, (snapshot) => {
+      const classList = document.getElementById("classList");
+      classList.innerHTML = "";
 
-        const defaultWeekend = [
-            ["09:00-09:35", "12SAY2<br><span class='text-xs text-slate-500'>Geo</span>", "12TM2<br><span class='text-xs text-slate-500'>Mat-AYT</span>"],
-            ["09:45-10:20", "12SAY2<br><span class='text-xs text-slate-500'>Geo</span>", "12SAY1<br><span class='text-xs text-slate-500'>Geo</span>"],
-            ["10:30-11:05", "-", "11SAY1<br><span class='text-xs text-slate-500'>Mat-TYT</span>"],
-            ["11:15-11:50", "HS10A<br><span class='text-xs text-slate-500'>Mat</span>", "11SAY1<br><span class='text-xs text-slate-500'>Mat-TYT</span>"],
-            ["12:00-12:35", "12TM1<br><span class='text-xs text-slate-500'>Mat-TYT</span>", "12SAY1<br><span class='text-xs text-slate-500'>Mat-AYT</span>"],
-            ["12:45-13:20", "12TM1<br><span class='text-xs text-slate-500'>Mat-TYT</span>", "12SAY1<br><span class='text-xs text-slate-500'>Mat-AYT</span>"],
-            ["14:00-14:35", "12SAY1<br><span class='text-xs text-slate-500'>Mat-TYT</span>", "12SAY2<br><span class='text-xs text-slate-500'>Mat-AYT</span>"],
-            ["14:45-15:20", "12SAY1<br><span class='text-xs text-slate-500'>Mat-TYT</span>", "12SAY2<br><span class='text-xs text-slate-500'>Mat-AYT</span>"],
-            ["15:30-16:05", "11SAY1<br><span class='text-xs text-slate-500'>Mat</span>", "11TM1<br><span class='text-xs text-slate-500'>Mat-TYT</span>"],
-            ["16:15-16:50", "11SAY1<br><span class='text-xs text-slate-500'>Mat</span>", "11TM1<br><span class='text-xs text-slate-500'>Mat-TYT</span>"],
-            ["17:00-17:35", "12TM2<br><span class='text-xs text-slate-500'>Mat-AYT</span>", "12TM1<br><span class='text-xs text-slate-500'>Mat-AYT</span>"],
-            ["17:45-18:20", "-", "12TM1<br><span class='text-xs text-slate-500'>Mat-AYT</span>"]
-        ];
+      snapshot.docs.forEach((docSnap) => {
+        const data = docSnap.data();
+        const id = docSnap.id;
+        
+        const card = document.createElement("div");
+        card.className = "bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4";
+        card.innerHTML = `
+          <div class="flex justify-between items-center border-b pb-3">
+            <h2 class="text-xl font-bold text-slate-800">${data.name}</h2>
+            <button onclick="deleteClass('${id}')" class="text-red-500 hover:text-red-700 text-sm font-medium">Sınıfı Sil</button>
+          </div>
+          <form onsubmit="updateClassProgress(event, '${id}')" class="space-y-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Anlatılan Konu</label>
+              <input type="text" id="topic-${id}" value="${data.topic || ''}" placeholder="İşlenen konu..." class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Kalan Sayfa / Soru</label>
+              <input type="text" id="page-${id}" value="${data.page || ''}" placeholder="Örn: s. 142 veya Soru 15" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Verilen Ödev</label>
+              <textarea id="homework-${id}" placeholder="Ödev detayları..." class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 h-20">${data.homework || ''}</textarea>
+            </div>
+            <button type="submit" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-2 rounded-lg text-sm transition font-medium">Kaydet / Güncelle</button>
+          </form>
+        `;
+        classList.appendChild(card);
+      });
+    });
 
-        let localData = {
-            classes: ["11SAY1", "12SAY1", "12SAY2", "12TM1", "12TM2", "HS10A", "11TM1"],
-            logs: [],
-            schedule: {
-                weekday: defaultWeekday,
-                weekend: defaultWeekend
-            }
-        };
+    // Yeni Sınıf Ekleme
+    document.getElementById("addClassForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const input = document.getElementById("classNameInput");
+      const name = input.value.trim();
+      if (!name) return;
 
-        document.getElementById('dateInput').valueAsDate = new Date();
+      const docId = name.toLowerCase().replace(/\s+/g, '-');
+      await setDoc(doc(db, "classes", docId), {
+        name: name,
+        topic: "",
+        page: "",
+        homework: "",
+        updatedAt: serverTimestamp()
+      });
+      input.value = "";
+    });
 
-        // Veritabanı Dinleyici
-        onSnapshot(mainDocRef, (docSnap) => {
-            if (docSnap.exists()) {
-                localData = docSnap.data();
-                renderAll();
-            } else {
-                setDoc(mainDocRef, localData).catch(err => showStatus(err.message, true));
-                renderAll();
-            }
-        }, (error) => {
-            showStatus("Firebase Bağlantı/Yetki Hatası: " + error.message, true);
-        });
+    // Ders Notlarını Güncelleme
+    window.updateClassProgress = async (e, id) => {
+      e.preventDefault();
+      const topic = document.getElementById(`topic-${id}`).value;
+      const page = document.getElementById(`page-${id}`).value;
+      const homework = document.getElementById(`homework-${id}`).value;
 
-        function renderAll() {
-            renderSchedule();
-            renderClasses();
-            renderLogs();
-            updateClassSelect();
-        }
+      await updateDoc(doc(db, "classes", id), {
+        topic,
+        page,
+        homework,
+        updatedAt: serverTimestamp()
+      });
+      alert("Notlar güncellendi!");
+    };
 
-        async function syncToFirebase() {
-            try {
-                await setDoc(mainDocRef, localData);
-                showStatus("Değişiklikler Firebase'e başarıyla kaydedildi.");
-            } catch (error) {
-                showStatus("Kaydedilirken hata oluştu: " + error.message, true);
-            }
-        }
-
-        function renderSchedule() {
-            const weekdayBody = document.getElementById('weekdayTableBody');
-            const weekendBody = document.getElementById('weekendTableBody');
-            
-            weekdayBody.innerHTML = '';
-            weekendBody.innerHTML = '';
-
-            localData.schedule.weekday.forEach((row, rowIndex) => {
-                let tr = document.createElement('tr');
-                row.forEach((cell, colIndex) => {
-                    let isTimeCol = colIndex === 0;
-                    let td = document.createElement('td');
-                    td.className = `border border-slate-300 p-2 editable-cell ${isTimeCol ? 'font-medium bg-slate-50' : ''}`;
-                    td.contentEditable = "true";
-                    td.innerHTML = cell;
-                    td.onblur = () => updateScheduleCell('weekday', rowIndex, colIndex, td.innerHTML);
-                    tr.appendChild(td);
-                });
-                weekdayBody.appendChild(tr);
-            });
-
-            localData.schedule.weekend.forEach((row, rowIndex) => {
-                let tr = document.createElement('tr');
-                row.forEach((cell, colIndex) => {
-                    let isTimeCol = colIndex === 0;
-                    let td = document.createElement('td');
-                    td.className = `border border-slate-300 p-2 editable-cell ${isTimeCol ? 'font-medium bg-slate-50' : ''}`;
-                    td.contentEditable = "true";
-                    td.innerHTML = cell;
-                    td.onblur = () => updateScheduleCell('weekend', rowIndex, colIndex, td.innerHTML);
-                    tr.appendChild(td);
-                });
-                weekendBody.appendChild(tr);
-            });
-        }
-
-        async function updateScheduleCell(type, row, col, newContent) {
-            if (localData.schedule[type][row][col] !== newContent) {
-                localData.schedule[type][row][col] = newContent;
-                await syncToFirebase();
-            }
-        }
-
-        document.getElementById('addClassBtn').addEventListener('click', async () => {
-            const input = document.getElementById('newClassInput');
-            const className = input.value.trim().toUpperCase();
-            if (className && !localData.classes.includes(className)) {
-                localData.classes.push(className);
-                localData.classes.sort();
-                input.value = '';
-                await syncToFirebase();
-            }
-        });
-
-        window.deleteClass = async (className) => {
-            if(confirm(`${className} sınıfını silmek istediğinize emin misiniz?`)) {
-                localData.classes = localData.classes.filter(c => c !== className);
-                await syncToFirebase();
-            }
-        };
-
-        function renderClasses() {
-            const list = document.getElementById('classList');
-            list.innerHTML = '';
-            (localData.classes || []).forEach(c => {
-                list.innerHTML += `
-                    <li class="flex justify-between items-center bg-slate-50 px-3 py-2 rounded border border-slate-100">
-                        <span class="font-medium text-slate-700">${c}</span>
-                        <button onclick="deleteClass('${c}')" class="text-red-400 hover:text-red-600"><i class="fas fa-times"></i></button>
-                    </li>`;
-            });
-        }
-
-        function updateClassSelect() {
-            const select = document.getElementById('classSelect');
-            select.innerHTML = '<option value="">Sınıf Seçin...</option>';
-            (localData.classes || []).forEach(c => { select.innerHTML += `<option value="${c}">${c}</option>`; });
-        }
-
-        document.getElementById('logForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const newLog = {
-                id: Date.now().toString(),
-                className: document.getElementById('classSelect').value,
-                date: document.getElementById('dateInput').value,
-                period: document.getElementById('periodInput').value,
-                topic: document.getElementById('topicInput').value,
-                page: document.getElementById('pageInput').value,
-                homework: document.getElementById('homeworkInput').value
-            };
-            if (!localData.logs) localData.logs = [];
-            localData.logs.unshift(newLog);
-            await syncToFirebase();
-
-            document.getElementById('topicInput').value = '';
-            document.getElementById('pageInput').value = '';
-            document.getElementById('homeworkInput').value = '';
-            document.getElementById('periodInput').value = '';
-        });
-
-        window.deleteLog = async (id) => {
-            if(confirm('Bu kaydı silmek istediğinize emin misiniz?')) {
-                localData.logs = localData.logs.filter(log => log.id !== id);
-                await syncToFirebase();
-            }
-        };
-
-        document.getElementById('clearLogsBtn').addEventListener('click', async () => {
-            if(confirm('Tüm ders geçmişini silmek istediğinize emin misiniz? Bu işlem geri alınamaz!')) {
-                localData.logs = [];
-                await syncToFirebase();
-            }
-        });
-
-        function renderLogs() {
-            const tbody = document.getElementById('logsTableBody');
-            const emptyState = document.getElementById('emptyState');
-            const table = tbody.parentElement;
-            tbody.innerHTML = '';
-
-            const logs = localData.logs || [];
-
-            if (logs.length === 0) {
-                table.classList.add('hidden');
-                emptyState.classList.remove('hidden');
-                emptyState.classList.add('flex');
-            } else {
-                table.classList.remove('hidden');
-                emptyState.classList.add('hidden');
-                emptyState.classList.remove('flex');
-                logs.forEach(log => {
-                    const formattedDate = new Date(log.date).toLocaleDateString('tr-TR');
-                    tbody.innerHTML += `
-                        <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                            <td class="p-3 text-slate-600 whitespace-nowrap">${formattedDate}</td>
-                            <td class="p-3 font-bold text-indigo-600">${log.className}</td>
-                            <td class="p-3"><span class="bg-indigo-100 text-indigo-800 py-1 px-2 rounded text-xs font-semibold">${log.period} Ders</span></td>
-                            <td class="p-3">
-                                <div class="font-medium text-slate-700">${log.topic}</div>
-                                ${log.page ? `<div class="text-xs text-slate-500 mt-1"><i class="fas fa-bookmark mr-1"></i>${log.page}</div>` : ''}
-                            </td>
-                            <td class="p-3 text-slate-600">${log.homework || '-'}</td>
-                            <td class="p-3"><button onclick="deleteLog('${log.id}')" class="text-red-400 hover:text-red-600 p-1"><i class="fas fa-trash"></i></button></td>
-                        </tr>`;
-                });
-            }
-        }
-    </script>
+    // Sınıfı Silme
+    window.deleteClass = async (id) => {
+      if (confirm("Bu sınıfı ve tüm notlarını silmek istediğinize emin misiniz?")) {
+        await deleteDoc(doc(db, "classes", id));
+      }
+    };
+  </script>
 </body>
 </html>
 
