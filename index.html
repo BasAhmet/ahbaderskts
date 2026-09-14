@@ -21,6 +21,9 @@
 <body class="bg-slate-50 text-slate-800 font-sans min-h-screen">
 
     <div class="max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
+        <!-- Hata / Durum Bildirim Kutusu -->
+        <div id="statusBanner" class="hidden mb-4 p-4 rounded-xl text-sm font-medium"></div>
+
         <h1 class="text-3xl font-bold text-slate-700 mb-8 text-center">
             <i class="fas fa-book-open mr-2 text-indigo-500"></i>Ders ve Konu Takip Sistemi
         </h1>
@@ -32,7 +35,7 @@
                     <i class="far fa-calendar-alt mr-2 text-indigo-500"></i>Ders Programım
                 </h2>
                 <div class="text-xs text-amber-600 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
-                    <i class="fas fa-edit mr-1"></i> Tablodaki yazılara tıklayarak değiştirebilirsiniz (Firebase'e anında kaydedilir)
+                    <i class="fas fa-edit mr-1"></i> Tablodaki yazılara tıklayarak değiştirebilirsiniz
                 </div>
             </div>
 
@@ -74,10 +77,7 @@
 
         <!-- TAKİP SİSTEMİ BÖLÜMÜ -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            
-            <!-- Sol Panel: Sınıf Yönetimi ve Kayıt Formu -->
             <div class="md:col-span-1 space-y-6">
-                
                 <!-- Sınıf Yönetimi Kartı -->
                 <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
                     <h2 class="text-xl font-semibold mb-4 text-slate-700">Sınıf Yönetimi</h2>
@@ -169,7 +169,6 @@
     <!-- FIREBASE INTEGRATION MODULE -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
         import { 
             getFirestore, 
             doc, 
@@ -177,7 +176,6 @@
             onSnapshot 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // YENİ FIREBASE CONFIG
         const firebaseConfig = {
             apiKey: "AIzaSyActPpb2TrOqKV4OwnxjJ36n33Xoh8ai0g",
             authDomain: "ahbaderskts.firebaseapp.com",
@@ -189,13 +187,23 @@
         };
 
         const app = initializeApp(firebaseConfig);
-        const analytics = getAnalytics(app);
         const db = getFirestore(app);
 
-        // Firestore Belge Referansı
         const mainDocRef = doc(db, "appData", "teacherDashboard");
 
-        // Varsayılan Program Verisi
+        function showStatus(message, isError = false) {
+            const banner = document.getElementById('statusBanner');
+            banner.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
+            if (isError) {
+                banner.classList.add('bg-red-100', 'text-red-700');
+                banner.innerHTML = `<i class="fas fa-exclamation-triangle mr-2"></i><strong>Hata:</strong> ${message}`;
+            } else {
+                banner.classList.add('bg-green-100', 'text-green-700');
+                banner.innerHTML = `<i class="fas fa-check-circle mr-2"></i>${message}`;
+                setTimeout(() => banner.classList.add('hidden'), 3000);
+            }
+        }
+
         const defaultWeekday = [
             ["15:25-16:00", "-", "-", "-", "-", "-"],
             ["16:05-16:40", "-", "-", "-", "-", "-"],
@@ -231,15 +239,17 @@
 
         document.getElementById('dateInput').valueAsDate = new Date();
 
-        // --- FIREBASE DİNLEYİCİ ---
+        // Veritabanı Dinleyici
         onSnapshot(mainDocRef, (docSnap) => {
             if (docSnap.exists()) {
                 localData = docSnap.data();
                 renderAll();
             } else {
-                setDoc(mainDocRef, localData);
+                setDoc(mainDocRef, localData).catch(err => showStatus(err.message, true));
                 renderAll();
             }
+        }, (error) => {
+            showStatus("Firebase Bağlantı/Yetki Hatası: " + error.message, true);
         });
 
         function renderAll() {
@@ -250,10 +260,14 @@
         }
 
         async function syncToFirebase() {
-            await setDoc(mainDocRef, localData);
+            try {
+                await setDoc(mainDocRef, localData);
+                showStatus("Değişiklikler Firebase'e başarıyla kaydedildi.");
+            } catch (error) {
+                showStatus("Kaydedilirken hata oluştu: " + error.message, true);
+            }
         }
 
-        // --- DERS PROGRAMI YÖNETİMİ ---
         function renderSchedule() {
             const weekdayBody = document.getElementById('weekdayTableBody');
             const weekendBody = document.getElementById('weekendTableBody');
@@ -291,11 +305,12 @@
         }
 
         async function updateScheduleCell(type, row, col, newContent) {
-            localData.schedule[type][row][col] = newContent;
-            await syncToFirebase();
+            if (localData.schedule[type][row][col] !== newContent) {
+                localData.schedule[type][row][col] = newContent;
+                await syncToFirebase();
+            }
         }
 
-        // --- SINIF VE KAYIT YÖNETİMİ ---
         document.getElementById('addClassBtn').addEventListener('click', async () => {
             const input = document.getElementById('newClassInput');
             const className = input.value.trim().toUpperCase();
@@ -403,3 +418,4 @@
     </script>
 </body>
 </html>
+
