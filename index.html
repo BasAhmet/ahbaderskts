@@ -173,20 +173,19 @@
         import { 
             getFirestore, 
             doc, 
-            getDoc, 
             setDoc, 
-            updateDoc, 
             onSnapshot 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
+        // YENİ FIREBASE CONFIG
         const firebaseConfig = {
             apiKey: "AIzaSyActPpb2TrOqKV4OwnxjJ36n33Xoh8ai0g",
             authDomain: "ahbaderskts.firebaseapp.com",
             projectId: "ahbaderskts",
             storageBucket: "ahbaderskts.firebasestorage.app",
             messagingSenderId: "813687362214",
-            appId: "1:813687362214:web:0a2315778e038624f4da67",
-            measurementId: "G-XBXLJJ5H26"
+            appId: "1:813687362214:web:d8f447b6eb579aacf4da67",
+            measurementId: "G-6HQPQSTJBN"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -232,13 +231,12 @@
 
         document.getElementById('dateInput').valueAsDate = new Date();
 
-        // --- FIREBASE DİNLEYİCİ (Gerçek Zamanlı Senkronizasyon) ---
+        // --- FIREBASE DİNLEYİCİ ---
         onSnapshot(mainDocRef, (docSnap) => {
             if (docSnap.exists()) {
                 localData = docSnap.data();
                 renderAll();
             } else {
-                // Belge veritabanında yoksa ilk kurulumu yap
                 setDoc(mainDocRef, localData);
                 renderAll();
             }
