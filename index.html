@@ -3,18 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ders Takip Sistemi</title>
+    <title>Ders Takip Sistemi - Giriş</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-slate-100 min-h-screen font-sans">
 
-    <div class="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
-        <header class="mb-8 text-center sm:text-left flex justify-between items-center">
-            <div>
-                <h1 class="text-3xl font-bold text-slate-800">Ders Takip Sistemi</h1>
-                <p class="text-slate-500 mt-1">Konu, sayfa ve ödev kayıtları</p>
+    <!-- GİRİŞ EKRANI -->
+    <div id="loginScreen" class="flex items-center justify-center min-h-screen px-4">
+        <div class="bg-white p-8 rounded-xl shadow-lg max-w-md w-full border border-slate-200">
+            <div class="text-center mb-8">
+                <div class="bg-blue-600 text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-md">
+                    <i class="fas fa-lock text-2xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-slate-800">Yönetici Girişi</h2>
+                <p class="text-slate-500 mt-2 text-sm">Ders takip sistemine erişmek için giriş yapın.</p>
             </div>
+            
+            <form id="loginForm" class="space-y-5">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">E-posta Adresi</label>
+                    <input type="email" id="email" required class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 pl-10 relative">
+                    <i class="fas fa-envelope absolute text-slate-400 mt-[-28px] ml-3"></i>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Şifre</label>
+                    <input type="password" id="password" required class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 pl-10 relative">
+                    <i class="fas fa-key absolute text-slate-400 mt-[-28px] ml-3"></i>
+                </div>
+                <div id="loginError" class="hidden bg-red-50 text-red-600 text-sm p-3 rounded-lg border border-red-100 text-center">
+                    Hatalı e-posta veya şifre girdiniz.
+                </div>
+                <button type="submit" id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-lg transition shadow-sm flex justify-center items-center gap-2">
+                    <span>Giriş Yap</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ANA UYGULAMA EKRANI (Başlangıçta Gizli) -->
+    <div id="mainApp" class="hidden max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
+        <header class="mb-8 flex flex-col sm:flex-row justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+            <div class="text-center sm:text-left mb-4 sm:mb-0">
+                <h1 class="text-2xl sm:text-3xl font-bold text-slate-800">Ders Takip Sistemi</h1>
+                <p class="text-slate-500 mt-1 text-sm">Konu, sayfa ve ödev kayıtları</p>
+            </div>
+            <button id="logoutBtn" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-4 py-2 rounded-lg transition flex items-center gap-2">
+                <i class="fas fa-sign-out-alt"></i> Çıkış Yap
+            </button>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -90,6 +126,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+        // YENİ EKLENEN AUTH MODÜLLERİ
+        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyActPpb2TrOqKV4OwnxjJ36n33Xoh8ai0g",
@@ -103,185 +141,100 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app); // Auth başlatıldı
 
-        // Tarih inputunu bugünün tarihi ile doldur
-        document.getElementById('lessonDate').valueAsDate = new Date();
+        // Arayüz Elementleri
+        const loginScreen = document.getElementById('loginScreen');
+        const mainApp = document.getElementById('mainApp');
+        const loginError = document.getElementById('loginError');
 
-        // --- SINIF İŞLEMLERİ ---
-        const loadClasses = async () => {
-            const classListEl = document.getElementById('classList');
-            const classSelect = document.getElementById('classSelect');
-            const filterClass = document.getElementById('filterClass');
-            
-            classListEl.innerHTML = '<li class="text-slate-500">Yükleniyor...</li>';
-            
-            try {
-                const q = query(collection(db, "classes"), orderBy("name"));
-                const querySnapshot = await getDocs(q);
-                
-                classListEl.innerHTML = '';
-                let optionsHtml = '<option value="" disabled selected>Sınıf Seçin...</option>';
-                let filterHtml = '<option value="all">Tüm Sınıflar</option>';
-
-                querySnapshot.forEach((docSnap) => {
-                    const data = docSnap.data();
-                    // Liste Görünümü
-                    const li = document.createElement('li');
-                    li.className = 'flex justify-between items-center bg-slate-50 p-2 rounded border';
-                    li.innerHTML = `
-                        <span class="font-medium text-slate-700">${data.name}</span>
-                        <button class="text-red-500 hover:text-red-700 text-sm delete-class-btn" data-id="${docSnap.id}">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    `;
-                    classListEl.appendChild(li);
-
-                    // Select Görünümleri
-                    optionsHtml += `<option value="${data.name}">${data.name}</option>`;
-                    filterHtml += `<option value="${data.name}">${data.name}</option>`;
-                });
-
-                classSelect.innerHTML = optionsHtml;
-                filterClass.innerHTML = filterHtml;
-
-                if (querySnapshot.empty) {
-                    classListEl.innerHTML = '<li class="text-slate-500 text-xs">Henüz sınıf eklenmedi.</li>';
-                }
-
-                // Sınıf silme event listener'ları
-                document.querySelectorAll('.delete-class-btn').forEach(btn => {
-                    btn.addEventListener('click', async (e) => {
-                        if(confirm('Bu sınıfı silmek istediğinize emin misiniz?')) {
-                            const id = e.currentTarget.getAttribute('data-id');
-                            await deleteDoc(doc(db, "classes", id));
-                            loadClasses();
-                        }
-                    });
-                });
-
-            } catch (error) {
-                console.error("Sınıflar yüklenirken hata oluştu: ", error);
-            }
-        };
-
-        document.getElementById('addClassBtn').addEventListener('click', async () => {
-            const nameInput = document.getElementById('newClassName');
-            const nameVal = nameInput.value.trim();
-            if(nameVal) {
-                await addDoc(collection(db, "classes"), {
-                    name: nameVal,
-                    createdAt: serverTimestamp()
-                });
-                nameInput.value = '';
+        // --- KİMLİK DOĞRULAMA (AUTH) İŞLEMLERİ ---
+        
+        // Kullanıcının oturum durumunu dinle (Giriş yaptıysa uygulamayı aç, yapmadıysa giriş ekranını göster)
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // Giriş yapılmış
+                loginScreen.classList.add('hidden');
+                mainApp.classList.remove('hidden');
+                // Verileri çekmeye başla
                 loadClasses();
+                loadLogs();
+            } else {
+                // Çıkış yapılmış veya henüz girilmemiş
+                loginScreen.classList.remove('hidden');
+                mainApp.classList.add('hidden');
             }
         });
 
-        // --- DERS KAYIT İŞLEMLERİ ---
-        const loadLogs = async () => {
-            const logsContainer = document.getElementById('logsContainer');
-            const filterVal = document.getElementById('filterClass').value;
-            
-            try {
-                // Not: Karmaşık sorgular indeks gerektirebileceği için filtrelemeyi client-side yapıyoruz
-                const q = query(collection(db, "lesson_logs"), orderBy("date", "desc"), orderBy("createdAt", "desc"));
-                const querySnapshot = await getDocs(q);
-                
-                logsContainer.innerHTML = '';
-                let hasRecords = false;
-
-                querySnapshot.forEach((docSnap) => {
-                    const data = docSnap.data();
-                    
-                    if(filterVal !== 'all' && data.className !== filterVal) return;
-                    hasRecords = true;
-
-                    // Tarih formatlama
-                    const dateObj = new Date(data.date);
-                    const formattedDate = dateObj.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
-
-                    const card = document.createElement('div');
-                    card.className = 'bg-white p-4 rounded-lg border border-slate-200 hover:shadow-md transition relative';
-                    
-                    card.innerHTML = `
-                        <button class="absolute top-4 right-4 text-slate-400 hover:text-red-500 delete-log-btn" data-id="${docSnap.id}">
-                            <i class="fas fa-times"></i>
-                        </button>
-                        <div class="flex items-center gap-3 mb-2">
-                            <span class="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-1 rounded">${data.className}</span>
-                            <span class="text-sm text-slate-500"><i class="far fa-calendar-alt mr-1"></i>${formattedDate}</span>
-                        </div>
-                        <h3 class="text-lg font-bold text-slate-800 mb-1">${data.topic}</h3>
-                        ${data.page ? `<p class="text-sm text-slate-600 mb-2"><i class="fas fa-book-open w-4 text-center mr-1"></i> <strong>Kalınan Sayfa:</strong> ${data.page}</p>` : ''}
-                        ${data.homework ? `
-                        <div class="mt-3 bg-amber-50 border border-amber-200 rounded p-3 text-sm text-amber-900">
-                            <strong class="flex items-center gap-1 mb-1"><i class="fas fa-edit"></i> Ödev:</strong>
-                            ${data.homework}
-                        </div>` : ''}
-                    `;
-                    logsContainer.appendChild(card);
-                });
-
-                if (!hasRecords) {
-                    logsContainer.innerHTML = '<div class="text-center text-slate-500 py-8">Bu kriterlere uygun kayıt bulunamadı.</div>';
-                }
-
-                // Log silme event listener'ları
-                document.querySelectorAll('.delete-log-btn').forEach(btn => {
-                    btn.addEventListener('click', async (e) => {
-                        if(confirm('Bu ders kaydını silmek istediğinize emin misiniz?')) {
-                            const id = e.currentTarget.getAttribute('data-id');
-                            await deleteDoc(doc(db, "lesson_logs", id));
-                            loadLogs();
-                        }
-                    });
-                });
-
-            } catch (error) {
-                console.error("Kayıtlar yüklenirken hata oluştu: ", error);
-                logsContainer.innerHTML = '<div class="text-center text-red-500 py-8">Kayıtlar yüklenirken bir hata oluştu. Lütfen konsolu kontrol edin.</div>';
-            }
-        };
-
-        // Form Gönderme
-        document.getElementById('lessonForm').addEventListener('submit', async (e) => {
+        // Giriş Yapma İşlemi
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const loginBtn = document.getElementById('loginBtn');
+            const originalText = loginBtn.innerHTML;
             
-            const submitBtn = e.target.querySelector('button[type="submit"]');
-            const originalText = submitBtn.innerHTML;
-            submitBtn.innerHTML = 'Kaydediliyor...';
-            submitBtn.disabled = true;
+            loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Bekleyin...';
+            loginBtn.disabled = true;
+Sistemi dışa kapatıp sadece senin erişebilmen için en güvenli ve pratik yöntem **Firebase Authentication** kullanmaktır. 
 
-            const newLog = {
-                className: document.getElementById('classSelect').value,
-                topic: document.getElementById('topic').value,
-                page: document.getElementById('pageNumber').value,
-                date: document.getElementById('lessonDate').value,
-                homework: document.getElementById('homework').value,
-                createdAt: serverTimestamp()
-            };
+Uygulamaya bir "Kayıt Ol" (Register) özelliği eklemeyeceğiz. Hesabını doğrudan Firebase paneli üzerinden manuel olarak oluşturacaksın, böylece senden başka hiç kimse sisteme kayıt olup giriş yapamayacak.
 
-            try {
-                await addDoc(collection(db, "lesson_logs"), newLog);
-                e.target.reset(); // Formu temizle
-                document.getElementById('lessonDate').valueAsDate = new Date(); // Tarihi tekrar bugüne ayarla
-                await loadLogs(); // Listeyi yenile
-            } catch (error) {
-                console.error("Kayıt eklenirken hata oluştu: ", error);
-                alert("Kayıt eklenirken bir hata oluştu.");
-            } finally {
-                submitBtn.innerHTML = originalText;
-                submitBtn.disabled = false;
-            }
-        });
+İşte adım adım kurulum:
 
-        // Filtre değiştiğinde kayıtları yeniden yükle
-        document.getElementById('filterClass').addEventListener('change', loadLogs);
+### 1. Firebase Console'da Yetkilendirmeyi Aç
+1. Firebase Console'a git ve projeni seç.
+2. Sol menüden **Authentication** sekmesine tıkla ve **Get Started** de.
+3. **Sign-in method** sekmesinden **Email/Password** seçeneğini etkinleştir (sadece Email/Password yeterli, Passwordless link kısmına gerek yok).
+4. Üstteki **Users** sekmesine geç.
+5. **Add User** butonuna tıkla, kendi e-posta adresini ve belirlediğin şifreyi yazarak hesabını oluştur. Sisteme sadece bu bilgilerle girilebilecek.
 
-        // Sayfa yüklendiğinde dataları çek
-        loadClasses();
-        loadLogs();
+---
 
-    </script>
+### 2. HTML ve Tailwind ile Ekranları Hazırlama
+Sayfanın `<body>` kısmını iki ana bölmeye ayırmamız gerekiyor: Biri giriş ekranı, diğeri ana uygulaman. Uygulamanın ana içeriğini başlangıçta gizli (`hidden`) tutacağız.
+
+```html
+<body class="bg-gray-50">
+
+  <!-- GİRİŞ EKRANI -->
+  <div id="login-screen" class="min-h-screen flex items-center justify-center bg-gray-100">
+    <div class="bg-white p-8 rounded-lg shadow-md w-96">
+      <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">Yönetici Girişi</h2>
+      
+      <form id="login-form">
+        <div class="mb-4">
+          <label class="block text-gray-700 text-sm font-bold mb-2" for="email">E-posta</label>
+          <input type="email" id="email" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+        </div>
+        
+        <div class="mb-6">
+          <label class="block text-gray-700 text-sm font-bold mb-2" for="password">Şifre</label>
+          <input type="password" id="password" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+        </div>
+        
+        <!-- Hata mesajı alanı -->
+        <p id="error-msg" class="text-red-500 text-sm mb-4 hidden"></p>
+        
+        <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition">Giriş Yap</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ANA UYGULAMA EKRANI (Başlangıçta gizli) -->
+  <div id="app-screen" class="hidden min-h-screen">
+    
+    <!-- Üst Menü / Navbar -->
+    <nav class="bg-blue-600 p-4 text-white flex justify-between items-center shadow-md">
+      <h1 class="text-xl font-bold">Sistem Paneli</h1>
+      <button id="logout-btn" class="bg-red-500 px-4 py-2 rounded-lg hover:bg-red-600 transition">Çıkış Yap</button>
+    </nav>
+    
+    <!-- Mevcut Sistem Kodların Buraya Gelecek -->
+    <div class="p-8">
+       <!-- Sistemin ana içeriği -->
+    </div>
+    
+  </div>
+
 </body>
-</html>
