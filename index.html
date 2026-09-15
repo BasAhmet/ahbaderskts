@@ -1,125 +1,287 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ders Takip Sistemi</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ders Takip Sistemi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-slate-100 min-h-screen p-4 md:p-8">
-  <div class="max-w-4xl mx-auto space-y-6">
-    
-    <!-- Başlık ve Yeni Sınıf Ekleme -->
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <h1 class="text-2xl font-bold text-slate-800">Sınıf Ders Takip Takibi</h1>
-      <form id="addClassForm" class="flex gap-2">
-        <input type="text" id="classNameInput" placeholder="Yeni Sınıf Adı (Örn: 9-A)" required class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition font-medium">Sınıf Ekle</button>
-      </form>
+<body class="bg-slate-100 min-h-screen font-sans">
+
+    <div class="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
+        <header class="mb-8 text-center sm:text-left flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold text-slate-800">Ders Takip Sistemi</h1>
+                <p class="text-slate-500 mt-1">Konu, sayfa ve ödev kayıtları</p>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Sol Panel: Formlar -->
+            <div class="space-y-6">
+                <!-- Sınıf Yönetimi Kartı -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h2 class="text-lg font-semibold text-slate-700 mb-4 border-b pb-2">Sınıf Yönetimi</h2>
+                    <div class="flex gap-2">
+                        <input type="text" id="newClassName" placeholder="Örn: 12-A" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button id="addClassBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition"><i class="fas fa-plus"></i></button>
+                    </div>
+                    <ul id="classList" class="mt-4 space-y-2 max-h-40 overflow-y-auto text-sm">
+                        <!-- Sınıflar buraya yüklenecek -->
+                    </ul>
+                </div>
+
+                <!-- Yeni Ders Kaydı Kartı -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h2 class="text-lg font-semibold text-slate-700 mb-4 border-b pb-2">Yeni Ders Notu Ekle</h2>
+                    <form id="lessonForm" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Sınıf Seçin</label>
+                            <select id="classSelect" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Sınıf Yükleniyor...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Anlatılan Konu</label>
+                            <input type="text" id="topic" required placeholder="Örn: Polinomlar - Çarpana Ayırma" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Kalınan Sayfa</label>
+                                <input type="text" id="pageNumber" placeholder="Örn: 125" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Tarih</label>
+                                <input type="date" id="lessonDate" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Ödevlendirme</label>
+                            <textarea id="homework" rows="2" placeholder="Örn: Soru Bankası Test 4 ve 5 çözülecek" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                        </div>
+                        <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition shadow-sm">
+                            Kaydı Kaydet
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Sağ Panel: Kayıtlar -->
+            <div class="lg:col-span-2">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 min-h-full">
+                    <div class="flex justify-between items-center mb-6 border-b pb-2">
+                        <h2 class="text-xl font-semibold text-slate-700">Son Ders Kayıtları</h2>
+                        <select id="filterClass" class="text-sm border rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="all">Tüm Sınıflar</option>
+                        </select>
+                    </div>
+                    
+                    <div id="logsContainer" class="space-y-4">
+                        <div class="text-center text-slate-500 py-8">Kayıtlar yükleniyor...</div>
+                        <!-- Ders notları buraya yüklenecek -->
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Sınıflar Listesi Container -->
-    <div id="classList" class="grid gap-6 md:grid-cols-2">
-      <!-- Firestore'dan gelen veriler buraya yüklenecek -->
-    </div>
+    <!-- Firebase Scripts -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
-  </div>
+        const firebaseConfig = {
+            apiKey: "AIzaSyActPpb2TrOqKV4OwnxjJ36n33Xoh8ai0g",
+            authDomain: "ahbaderskts.firebaseapp.com",
+            projectId: "ahbaderskts",
+            storageBucket: "ahbaderskts.firebasestorage.app",
+            messagingSenderId: "813687362214",
+            appId: "1:813687362214:web:d01dfee47affe151f4da67",
+            measurementId: "G-NK49PPLC1L"
+        };
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyActPpb2TrOqKV4OwnxjJ36n33Xoh8ai0g",
-      authDomain: "ahbaderskts.firebaseapp.com",
-      projectId: "ahbaderskts",
-      storageBucket: "ahbaderskts.firebasestorage.app",
-      messagingSenderId: "813687362214",
-      appId: "1:813687362214:web:d8f447b6eb579aacf4da67",
-      measurementId: "G-6HQPQSTJBN"
-    };
+        // Tarih inputunu bugünün tarihi ile doldur
+        document.getElementById('lessonDate').valueAsDate = new Date();
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const classesRef = collection(db, "classes");
+        // --- SINIF İŞLEMLERİ ---
+        const loadClasses = async () => {
+            const classListEl = document.getElementById('classList');
+            const classSelect = document.getElementById('classSelect');
+            const filterClass = document.getElementById('filterClass');
+            
+            classListEl.innerHTML = '<li class="text-slate-500">Yükleniyor...</li>';
+            
+            try {
+                const q = query(collection(db, "classes"), orderBy("name"));
+                const querySnapshot = await getDocs(q);
+                
+                classListEl.innerHTML = '';
+                let optionsHtml = '<option value="" disabled selected>Sınıf Seçin...</option>';
+                let filterHtml = '<option value="all">Tüm Sınıflar</option>';
 
-    // Canlı Veri Dinleme
-    onSnapshot(classesRef, (snapshot) => {
-      const classList = document.getElementById("classList");
-      classList.innerHTML = "";
+                querySnapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    // Liste Görünümü
+                    const li = document.createElement('li');
+                    li.className = 'flex justify-between items-center bg-slate-50 p-2 rounded border';
+                    li.innerHTML = `
+                        <span class="font-medium text-slate-700">${data.name}</span>
+                        <button class="text-red-500 hover:text-red-700 text-sm delete-class-btn" data-id="${docSnap.id}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    `;
+                    classListEl.appendChild(li);
 
-      snapshot.docs.forEach((docSnap) => {
-        const data = docSnap.data();
-        const id = docSnap.id;
-        
-        const card = document.createElement("div");
-        card.className = "bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4";
-        card.innerHTML = `
-          <div class="flex justify-between items-center border-b pb-3">
-            <h2 class="text-xl font-bold text-slate-800">${data.name}</h2>
-            <button onclick="deleteClass('${id}')" class="text-red-500 hover:text-red-700 text-sm font-medium">Sınıfı Sil</button>
-          </div>
-          <form onsubmit="updateClassProgress(event, '${id}')" class="space-y-3">
-            <div>
-              <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Anlatılan Konu</label>
-              <input type="text" id="topic-${id}" value="${data.topic || ''}" placeholder="İşlenen konu..." class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Kalan Sayfa / Soru</label>
-              <input type="text" id="page-${id}" value="${data.page || ''}" placeholder="Örn: s. 142 veya Soru 15" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Verilen Ödev</label>
-              <textarea id="homework-${id}" placeholder="Ödev detayları..." class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 h-20">${data.homework || ''}</textarea>
-            </div>
-            <button type="submit" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-2 rounded-lg text-sm transition font-medium">Kaydet / Güncelle</button>
-          </form>
-        `;
-        classList.appendChild(card);
-      });
-    });
+                    // Select Görünümleri
+                    optionsHtml += `<option value="${data.name}">${data.name}</option>`;
+                    filterHtml += `<option value="${data.name}">${data.name}</option>`;
+                });
 
-    // Yeni Sınıf Ekleme
-    document.getElementById("addClassForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const input = document.getElementById("classNameInput");
-      const name = input.value.trim();
-      if (!name) return;
+                classSelect.innerHTML = optionsHtml;
+                filterClass.innerHTML = filterHtml;
 
-      const docId = name.toLowerCase().replace(/\s+/g, '-');
-      await setDoc(doc(db, "classes", docId), {
-        name: name,
-        topic: "",
-        page: "",
-        homework: "",
-        updatedAt: serverTimestamp()
-      });
-      input.value = "";
-    });
+                if (querySnapshot.empty) {
+                    classListEl.innerHTML = '<li class="text-slate-500 text-xs">Henüz sınıf eklenmedi.</li>';
+                }
 
-    // Ders Notlarını Güncelleme
-    window.updateClassProgress = async (e, id) => {
-      e.preventDefault();
-      const topic = document.getElementById(`topic-${id}`).value;
-      const page = document.getElementById(`page-${id}`).value;
-      const homework = document.getElementById(`homework-${id}`).value;
+                // Sınıf silme event listener'ları
+                document.querySelectorAll('.delete-class-btn').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        if(confirm('Bu sınıfı silmek istediğinize emin misiniz?')) {
+                            const id = e.currentTarget.getAttribute('data-id');
+                            await deleteDoc(doc(db, "classes", id));
+                            loadClasses();
+                        }
+                    });
+                });
 
-      await updateDoc(doc(db, "classes", id), {
-        topic,
-        page,
-        homework,
-        updatedAt: serverTimestamp()
-      });
-      alert("Notlar güncellendi!");
-    };
+            } catch (error) {
+                console.error("Sınıflar yüklenirken hata oluştu: ", error);
+            }
+        };
 
-    // Sınıfı Silme
-    window.deleteClass = async (id) => {
-      if (confirm("Bu sınıfı ve tüm notlarını silmek istediğinize emin misiniz?")) {
-        await deleteDoc(doc(db, "classes", id));
-      }
-    };
-  </script>
+        document.getElementById('addClassBtn').addEventListener('click', async () => {
+            const nameInput = document.getElementById('newClassName');
+            const nameVal = nameInput.value.trim();
+            if(nameVal) {
+                await addDoc(collection(db, "classes"), {
+                    name: nameVal,
+                    createdAt: serverTimestamp()
+                });
+                nameInput.value = '';
+                loadClasses();
+            }
+        });
+
+        // --- DERS KAYIT İŞLEMLERİ ---
+        const loadLogs = async () => {
+            const logsContainer = document.getElementById('logsContainer');
+            const filterVal = document.getElementById('filterClass').value;
+            
+            try {
+                // Not: Karmaşık sorgular indeks gerektirebileceği için filtrelemeyi client-side yapıyoruz
+                const q = query(collection(db, "lesson_logs"), orderBy("date", "desc"), orderBy("createdAt", "desc"));
+                const querySnapshot = await getDocs(q);
+                
+                logsContainer.innerHTML = '';
+                let hasRecords = false;
+
+                querySnapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    
+                    if(filterVal !== 'all' && data.className !== filterVal) return;
+                    hasRecords = true;
+
+                    // Tarih formatlama
+                    const dateObj = new Date(data.date);
+                    const formattedDate = dateObj.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+
+                    const card = document.createElement('div');
+                    card.className = 'bg-white p-4 rounded-lg border border-slate-200 hover:shadow-md transition relative';
+                    
+                    card.innerHTML = `
+                        <button class="absolute top-4 right-4 text-slate-400 hover:text-red-500 delete-log-btn" data-id="${docSnap.id}">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <div class="flex items-center gap-3 mb-2">
+                            <span class="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-1 rounded">${data.className}</span>
+                            <span class="text-sm text-slate-500"><i class="far fa-calendar-alt mr-1"></i>${formattedDate}</span>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-800 mb-1">${data.topic}</h3>
+                        ${data.page ? `<p class="text-sm text-slate-600 mb-2"><i class="fas fa-book-open w-4 text-center mr-1"></i> <strong>Kalınan Sayfa:</strong> ${data.page}</p>` : ''}
+                        ${data.homework ? `
+                        <div class="mt-3 bg-amber-50 border border-amber-200 rounded p-3 text-sm text-amber-900">
+                            <strong class="flex items-center gap-1 mb-1"><i class="fas fa-edit"></i> Ödev:</strong>
+                            ${data.homework}
+                        </div>` : ''}
+                    `;
+                    logsContainer.appendChild(card);
+                });
+
+                if (!hasRecords) {
+                    logsContainer.innerHTML = '<div class="text-center text-slate-500 py-8">Bu kriterlere uygun kayıt bulunamadı.</div>';
+                }
+
+                // Log silme event listener'ları
+                document.querySelectorAll('.delete-log-btn').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        if(confirm('Bu ders kaydını silmek istediğinize emin misiniz?')) {
+                            const id = e.currentTarget.getAttribute('data-id');
+                            await deleteDoc(doc(db, "lesson_logs", id));
+                            loadLogs();
+                        }
+                    });
+                });
+
+            } catch (error) {
+                console.error("Kayıtlar yüklenirken hata oluştu: ", error);
+                logsContainer.innerHTML = '<div class="text-center text-red-500 py-8">Kayıtlar yüklenirken bir hata oluştu. Lütfen konsolu kontrol edin.</div>';
+            }
+        };
+
+        // Form Gönderme
+        document.getElementById('lessonForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = 'Kaydediliyor...';
+            submitBtn.disabled = true;
+
+            const newLog = {
+                className: document.getElementById('classSelect').value,
+                topic: document.getElementById('topic').value,
+                page: document.getElementById('pageNumber').value,
+                date: document.getElementById('lessonDate').value,
+                homework: document.getElementById('homework').value,
+                createdAt: serverTimestamp()
+            };
+
+            try {
+                await addDoc(collection(db, "lesson_logs"), newLog);
+                e.target.reset(); // Formu temizle
+                document.getElementById('lessonDate').valueAsDate = new Date(); // Tarihi tekrar bugüne ayarla
+                await loadLogs(); // Listeyi yenile
+            } catch (error) {
+                console.error("Kayıt eklenirken hata oluştu: ", error);
+                alert("Kayıt eklenirken bir hata oluştu.");
+            } finally {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+
+        // Filtre değiştiğinde kayıtları yeniden yükle
+        document.getElementById('filterClass').addEventListener('change', loadLogs);
+
+        // Sayfa yüklendiğinde dataları çek
+        loadClasses();
+        loadLogs();
+
+    </script>
 </body>
 </html>
-
