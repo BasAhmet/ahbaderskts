@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+    <!-- Mavi Arka Plan (Tailwind blue-600) -->
+    <rect x="32" y="32" width="448" height="448" rx="112" fill="#2563EB" />
+    
+    <!-- Ders / Not Kağıdı -->
+    <rect x="144" y="112" width="224" height="288" rx="24" fill="#FFFFFF" />
+    
+    <!-- Minimalist Pi Sembolü -->
+    <path d="M196 196 h120 M220 196 v100 M292 196 v100" stroke="#1E293B" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+    
+    <!-- Kağıt Üzerindeki Çizgiler -->
+    <path d="M196 320 h120 M196 360 h80" stroke="#CBD5E1" stroke-width="16" stroke-linecap="round" fill="none" />
+    
+    <!-- Turuncu Onay Rozeti (Tailwind amber-500) -->
+    <circle cx="368" cy="144" r="56" fill="#F59E0B" />
+    <path d="M340 144 l16 16 l32 -32" stroke="#FFFFFF" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+</svg>
