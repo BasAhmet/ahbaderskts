@@ -107,9 +107,27 @@
                 </div>
             </div>
 
-            <!-- Sağ Panel: Kayıtlar -->
+            <!-- Sağ Panel: Kayıtlar ve Program -->
             <div class="lg:col-span-2">
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 min-h-full">
+                
+                <!-- Ders Programı Kartı -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-blue-200 mb-6 bg-blue-50/30">
+                    <div class="flex justify-between items-center mb-4 border-b border-blue-100 pb-2">
+                        <h2 class="text-xl font-semibold text-slate-700">
+                            <i class="far fa-calendar-alt text-blue-600 mr-2"></i>Bugünün Ders Programı 
+                            <span id="todayName" class="text-blue-600 text-sm ml-2 font-normal"></span>
+                        </h2>
+                        <button id="refreshScheduleBtn" class="text-sm text-blue-600 hover:text-blue-800 transition flex items-center gap-1">
+                            <i class="fas fa-sync-alt"></i> Yenile
+                        </button>
+                    </div>
+                    <div id="todaySchedule" class="space-y-4">
+                        <div class="text-center text-slate-500 py-4"><i class="fas fa-spinner fa-spin mr-2"></i>Program yükleniyor...</div>
+                    </div>
+                </div>
+
+                <!-- Son Ders Kayıtları Kartı -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 min-h-[500px]">
                     <div class="flex justify-between items-center mb-6 border-b pb-2">
                         <h2 class="text-xl font-semibold text-slate-700">Son Ders Kayıtları</h2>
                         <select id="filterClass" class="text-sm border rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -128,9 +146,10 @@
     <!-- Firebase Scripts -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
+        // APP 2: DERS TAKİP SİSTEMİ YAPILANDIRMASI
         const firebaseConfig = {
             apiKey: "AIzaSyActPpb2TrOqKV4OwnxjJ36n33Xoh8ai0g",
             authDomain: "ahbaderskts.firebaseapp.com",
@@ -140,35 +159,45 @@
             appId: "1:813687362214:web:d01dfee47affe151f4da67",
             measurementId: "G-NK49PPLC1L"
         };
-
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // Arayüz Elementleri
+        // APP 1: DERS PROGRAMI SİSTEMİ YAPILANDIRMASI (Okuma)
+        const progConfig = {
+            apiKey: "AIzaSyDVZEEuWX9HbvsXo7_kdkpOoPgOT5D0mjA",
+            projectId: "ahbadersprogsystem"
+        };
+        const progApp = initializeApp(progConfig, "ProgApp");
+        const progDb = getFirestore(progApp);
+
+        // DOM Elementleri
         const loginScreen = document.getElementById('loginScreen');
         const mainApp = document.getElementById('mainApp');
         const loginError = document.getElementById('loginError');
         const loginForm = document.getElementById('loginForm');
         const logoutBtn = document.getElementById('logoutBtn');
 
-        // Tarih kutusunu bugünün tarihi yap
         document.getElementById('lessonDate').valueAsDate = new Date();
 
-        // --- KİMLİK DOĞRULAMA (AUTH) ---
+        const gunler = ["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"];
+        const bugun = gunler[new Date().getDay()];
+        document.getElementById('todayName').innerText = `(${bugun})`;
+
+        // AUTH
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 loginScreen.classList.add('hidden');
                 mainApp.classList.remove('hidden');
                 loadClasses();
                 loadLogs();
+                loadTodaySchedule();
             } else {
                 loginScreen.classList.remove('hidden');
                 mainApp.classList.add('hidden');
             }
         });
 
-        // Giriş Yap İşlemi
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             loginError.classList.add('hidden');
@@ -193,176 +222,232 @@
             }
         });
 
-        // Çıkış Yap İşlemi
         logoutBtn.addEventListener('click', async () => {
             await signOut(auth);
         });
 
-        // --- SINIF İŞLEMLERİ ---
-        const loadClasses = async () => {
-            const classListEl = document.getElementById('classList');
+        // SINIF YÖNETİMİ
+        async function loadClasses() {
+            const classList = document.getElementById('classList');
             const classSelect = document.getElementById('classSelect');
             const filterClass = document.getElementById('filterClass');
-            
-            classListEl.innerHTML = '<li class="text-slate-500">Yükleniyor...</li>';
-            
+
+            classList.innerHTML = '<li class="text-slate-400 py-2">Yükleniyor...</li>';
+
             try {
-                const q = query(collection(db, "classes"), orderBy("name"));
+                const q = query(collection(db, "siniflar"), orderBy("ad", "asc"));
                 const querySnapshot = await getDocs(q);
-                
-                classListEl.innerHTML = '';
-                let optionsHtml = '<option value="" disabled selected>Sınıf Seçin...</option>';
-                let filterHtml = '<option value="all">Tüm Sınıflar</option>';
 
-                querySnapshot.forEach((docSnap) => {
-                    const data = docSnap.data();
-                    
-                    const li = document.createElement('li');
-                    li.className = 'flex justify-between items-center bg-slate-50 p-2 rounded border';
-                    li.innerHTML = `
-                        <span class="font-medium text-slate-700">${data.name}</span>
-                        <button class="text-red-500 hover:text-red-700 text-sm delete-class-btn" data-id="${docSnap.id}">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    `;
-                    classListEl.appendChild(li);
-
-                    optionsHtml += `<option value="${data.name}">${data.name}</option>`;
-                    filterHtml += `<option value="${data.name}">${data.name}</option>`;
-                });
-
-                classSelect.innerHTML = optionsHtml;
-                filterClass.innerHTML = filterHtml;
+                classList.innerHTML = '';
+                classSelect.innerHTML = '<option value="">Sınıf Seçin...</option>';
+                filterClass.innerHTML = '<option value="all">Tüm Sınıflar</option>';
 
                 if (querySnapshot.empty) {
-                    classListEl.innerHTML = '<li class="text-slate-500 text-xs">Henüz sınıf eklenmedi.</li>';
+                    classList.innerHTML = '<li class="text-slate-400 text-xs py-1">Henüz sınıf eklenmedi.</li>';
+                    return;
                 }
-
-                document.querySelectorAll('.delete-class-btn').forEach(btn => {
-                    btn.addEventListener('click', async (e) => {
-                        if(confirm('Bu sınıfı silmek istediğinize emin misiniz?')) {
-                            const id = e.currentTarget.getAttribute('data-id');
-                            await deleteDoc(doc(db, "classes", id));
-                            loadClasses();
-                        }
-                    });
-                });
-
-            } catch (error) {
-                console.error("Sınıflar yüklenirken hata oluştu: ", error);
-            }
-        };
-
-        document.getElementById('addClassBtn').addEventListener('click', async () => {
-            const nameInput = document.getElementById('newClassName');
-            const nameVal = nameInput.value.trim();
-            if(nameVal) {
-                await addDoc(collection(db, "classes"), {
-                    name: nameVal,
-                    createdAt: serverTimestamp()
-                });
-                nameInput.value = '';
-                loadClasses();
-            }
-        });
-
-        // --- DERS KAYIT İŞLEMLERİ ---
-        const loadLogs = async () => {
-            const logsContainer = document.getElementById('logsContainer');
-            const filterVal = document.getElementById('filterClass').value;
-            
-            try {
-                const q = query(collection(db, "lesson_logs"), orderBy("date", "desc"), orderBy("createdAt", "desc"));
-                const querySnapshot = await getDocs(q);
-                
-                logsContainer.innerHTML = '';
-                let hasRecords = false;
 
                 querySnapshot.forEach((docSnap) => {
                     const data = docSnap.data();
-                    
-                    if(filterVal !== 'all' && data.className !== filterVal) return;
-                    hasRecords = true;
+                    const id = docSnap.id;
 
-                    const dateObj = new Date(data.date);
-                    const formattedDate = dateObj.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
-
-                    const card = document.createElement('div');
-                    card.className = 'bg-white p-4 rounded-lg border border-slate-200 hover:shadow-md transition relative';
-                    
-                    card.innerHTML = `
-                        <button class="absolute top-4 right-4 text-slate-400 hover:text-red-500 delete-log-btn" data-id="${docSnap.id}">
-                            <i class="fas fa-times"></i>
-                        </button>
-                        <div class="flex items-center gap-3 mb-2">
-                            <span class="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-1 rounded">${data.className}</span>
-                            <span class="text-sm text-slate-500"><i class="far fa-calendar-alt mr-1"></i>${formattedDate}</span>
-                        </div>
-                        <h3 class="text-lg font-bold text-slate-800 mb-1">${data.topic}</h3>
-                        ${data.page ? `<p class="text-sm text-slate-600 mb-2"><i class="fas fa-book-open w-4 text-center mr-1"></i> <strong>Kalınan Sayfa:</strong> ${data.page}</p>` : ''}
-                        ${data.homework ? `
-                        <div class="mt-3 bg-amber-50 border border-amber-200 rounded p-3 text-sm text-amber-900">
-                            <strong class="flex items-center gap-1 mb-1"><i class="fas fa-edit"></i> Ödev:</strong>
-                            ${data.homework}
-                        </div>` : ''}
+                    const li = document.createElement('li');
+                    li.className = "flex justify-between items-center bg-slate-50 p-2 rounded border border-slate-200";
+                    li.innerHTML = `
+                        <span class="font-medium text-slate-700">${data.ad}</span>
+                        <button onclick="deleteClass('${id}')" class="text-red-500 hover:text-red-700 text-xs"><i class="fas fa-trash"></i></button>
                     `;
-                    logsContainer.appendChild(card);
+                    classList.appendChild(li);
+
+                    classSelect.innerHTML += `<option value="${data.ad}">${data.ad}</option>`;
+                    filterClass.innerHTML += `<option value="${data.ad}">${data.ad}</option>`;
                 });
-
-                if (!hasRecords) {
-                    logsContainer.innerHTML = '<div class="text-center text-slate-500 py-8">Bu kriterlere uygun kayıt bulunamadı.</div>';
-                }
-
-                document.querySelectorAll('.delete-log-btn').forEach(btn => {
-                    btn.addEventListener('click', async (e) => {
-                        if(confirm('Bu ders kaydını silmek istediğinize emin misiniz?')) {
-                            const id = e.currentTarget.getAttribute('data-id');
-                            await deleteDoc(doc(db, "lesson_logs", id));
-                            loadLogs();
-                        }
-                    });
-                });
-
-            } catch (error) {
-                console.error("Kayıtlar yüklenirken hata oluştu: ", error);
-                logsContainer.innerHTML = '<div class="text-center text-red-500 py-8">Kayıtlar yüklenirken bir hata oluştu.</div>';
+            } catch (err) {
+                console.error("Sınıflar yüklenirken hata:", err);
+                classList.innerHTML = '<li class="text-red-500 text-xs py-1">Hata oluştu!</li>';
             }
-        };
+        }
 
-        // Form Gönderme
-        document.getElementById('lessonForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const submitBtn = e.target.querySelector('button[type="submit"]');
-            const originalText = submitBtn.innerHTML;
-            submitBtn.innerHTML = 'Kaydediliyor...';
-            submitBtn.disabled = true;
-
-            const newLog = {
-                className: document.getElementById('classSelect').value,
-                topic: document.getElementById('topic').value,
-                page: document.getElementById('pageNumber').value,
-                date: document.getElementById('lessonDate').value,
-                homework: document.getElementById('homework').value,
-                createdAt: serverTimestamp()
-            };
+        document.getElementById('addClassBtn').addEventListener('click', async () => {
+            const input = document.getElementById('newClassName');
+            const className = input.value.trim();
+            if (!className) return;
 
             try {
-                await addDoc(collection(db, "lesson_logs"), newLog);
-                e.target.reset();
-                document.getElementById('lessonDate').valueAsDate = new Date();
-                await loadLogs();
-            } catch (error) {
-                console.error("Kayıt eklenirken hata oluştu: ", error);
-                alert("Kayıt eklenirken bir hata oluştu.");
-            } finally {
-                submitBtn.innerHTML = originalText;
-                submitBtn.disabled = false;
+                await addDoc(collection(db, "siniflar"), {
+                    ad: className,
+                    createdAt: serverTimestamp()
+                });
+                input.value = '';
+                loadClasses();
+            } catch (err) {
+                console.error("Sınıf ekleme hatası:", err);
             }
         });
 
-        // Filtre değişimi
+        window.deleteClass = async (id) => {
+            if (!confirm("Bu sınıfı silmek istediğinize emin misiniz?")) return;
+            try {
+                await deleteDoc(doc(db, "siniflar", id));
+                loadClasses();
+            } catch (err) {
+                console.error("Silme hatası:", err);
+            }
+        };
+
+        // DERS KAYITLARI
+        document.getElementById('lessonForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const className = document.getElementById('classSelect').value;
+            const topic = document.getElementById('topic').value.trim();
+            const pageNumber = document.getElementById('pageNumber').value.trim();
+            const lessonDate = document.getElementById('lessonDate').value;
+            const homework = document.getElementById('homework').value.trim();
+
+            if (!className) {
+                alert("Lütfen bir sınıf seçin.");
+                return;
+            }
+
+            try {
+                await addDoc(collection(db, "ders_kayitlari"), {
+                    className,
+                    topic,
+                    pageNumber,
+                    lessonDate,
+                    homework,
+                    createdAt: serverTimestamp()
+                });
+
+                document.getElementById('topic').value = '';
+                document.getElementById('pageNumber').value = '';
+                document.getElementById('homework').value = '';
+                
+                loadLogs();
+            } catch (err) {
+                console.error("Ders kaydı hatası:", err);
+            }
+        });
+
+        async function loadLogs() {
+            const container = document.getElementById('logsContainer');
+            const selectedFilter = document.getElementById('filterClass').value;
+
+            container.innerHTML = '<div class="text-center text-slate-500 py-8"><i class="fas fa-spinner fa-spin mr-2"></i>Kayıtlar yükleniyor...</div>';
+
+            try {
+                let q = query(collection(db, "ders_kayitlari"), orderBy("createdAt", "desc"));
+                
+                if (selectedFilter !== 'all') {
+                    q = query(collection(db, "ders_kayitlari"), where("className", "==", selectedFilter), orderBy("createdAt", "desc"));
+                }
+
+                const querySnapshot = await getDocs(q);
+
+                if (querySnapshot.empty) {
+                    container.innerHTML = '<div class="text-center text-slate-400 py-8">Henüz kaydedilmiş bir ders bulunmuyor.</div>';
+                    return;
+                }
+
+                container.innerHTML = '';
+                querySnapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    const id = docSnap.id;
+
+                    const card = document.createElement('div');
+                    card.className = "p-4 rounded-lg border border-slate-200 bg-slate-50 relative hover:shadow-sm transition";
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">${data.className}</span>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs text-slate-400"><i class="far fa-calendar mr-1"></i>${data.lessonDate || ''}</span>
+                                <button onclick="deleteLog('${id}')" class="text-red-400 hover:text-red-600 text-sm"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+                        <h3 class="font-semibold text-slate-800 text-base mb-1">${data.topic}</h3>
+                        ${data.pageNumber ? `<p class="text-xs text-slate-500 mb-2"><i class="fas fa-book-open mr-1"></i> Kalınan Sayfa: <strong class="text-slate-700">${data.pageNumber}</strong></p>` : ''}
+                        ${data.homework ? `<div class="mt-2 text-xs bg-amber-50 border border-amber-200 text-amber-800 p-2 rounded"><i class="fas fa-pencil-alt mr-1"></i> <strong>Ödev:</strong> ${data.homework}</div>` : ''}
+                    `;
+                    container.appendChild(card);
+                });
+
+            } catch (err) {
+                console.error("Kayıt yükleme hatası:", err);
+                container.innerHTML = '<div class="text-center text-red-500 py-8">Kayıtlar çekilirken bir hata oluştu!</div>';
+            }
+        }
+
+        window.deleteLog = async (id) => {
+            if (!confirm("Bu ders kaydını silmek istediğinize emin misiniz?")) return;
+            try {
+                await deleteDoc(doc(db, "ders_kayitlari", id));
+                loadLogs();
+            } catch (err) {
+                console.error("Kayıt silme hatası:", err);
+            }
+        };
+
         document.getElementById('filterClass').addEventListener('change', loadLogs);
+
+        // DERS PROGRAMI YÜKLEME
+        async function loadTodaySchedule() {
+            const scheduleContainer = document.getElementById('todaySchedule');
+            scheduleContainer.innerHTML = '<div class="text-center text-slate-500 py-4"><i class="fas fa-spinner fa-spin mr-2"></i>Program yükleniyor...</div>';
+
+            try {
+                const progQuery = query(collection(progDb, "ana_programlar"));
+                const progSnap = await getDocs(progQuery);
+
+                let todayLessons = [];
+
+                if (!progSnap.empty) {
+                    for (const mainDoc of progSnap.docs) {
+                        const subColRef = collection(progDb, "ana_programlar", mainDoc.id, "ders_programi");
+                        const subSnap = await getDocs(subColRef);
+                        
+                        subSnap.forEach(itemDoc => {
+                            const lessonData = itemDoc.data();
+                            if (lessonData.gun === bugun) {
+                                todayLessons.push(lessonData);
+                            }
+                        });
+                    }
+                }
+
+                if (todayLessons.length === 0) {
+                    scheduleContainer.innerHTML = `<div class="text-center text-slate-400 py-4 text-sm"><i class="fas fa-info-circle mr-1"></i>${bugun} günü için ders programı bulunamadı.</div>`;
+                    return;
+                }
+
+                todayLessons.sort((a, b) => (a.saatIndex || 0) - (b.saatIndex || 0));
+
+                scheduleContainer.innerHTML = '';
+                todayLessons.forEach(item => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = "flex items-center justify-between bg-white p-3 rounded-lg border border-blue-100 shadow-sm";
+                    itemDiv.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <span class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">
+                                ${item.saat || item.dersSaati || '#'}
+                            </span>
+                            <div>
+                                <h4 class="font-semibold text-slate-800 text-sm">${item.sinif || item.sinifAd || 'Sınıf Belirtilmedi'}</h4>
+                                <p class="text-xs text-slate-500">${item.ders || item.dersAdi || 'Ders'} ${item.ogretmen ? '• ' + item.ogretmen : ''}</p>
+                            </div>
+                        </div>
+                        <span class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded"><i class="far fa-clock mr-1"></i>${item.saatAraligi || ''}</span>
+                    `;
+                    scheduleContainer.appendChild(itemDiv);
+                });
+
+            } catch (err) {
+                console.error("Ders programı yükleme hatası:", err);
+                scheduleContainer.innerHTML = '<div class="text-center text-red-500 py-4 text-sm">Ders programı alınamadı.</div>';
+            }
+        }
+
+        document.getElementById('refreshScheduleBtn').addEventListener('click', loadTodaySchedule);
     </script>
 </body>
 </html>
