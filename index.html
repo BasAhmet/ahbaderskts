@@ -46,7 +46,7 @@
     </div>
 
     <!-- ANA UYGULAMA EKRANI (Başlangıçta Gizli) -->
-    <div id="mainApp" class="hidden max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
+    <div id="mainApp" class="hidden max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         <header class="mb-8 flex flex-col sm:flex-row justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200 gap-4">
             <div class="text-center sm:text-left">
                 <h1 class="text-2xl sm:text-3xl font-bold text-slate-800">Ders Takip Sistemi</h1>
@@ -107,27 +107,27 @@
                 </div>
             </div>
 
-            <!-- Sağ Panel: Kayıtlar ve Program -->
-            <div class="lg:col-span-2">
+            <!-- Sağ Panel: Haftalık Program ve Kayıtlar -->
+            <div class="lg:col-span-2 space-y-6">
                 
-                <!-- Ders Programı Kartı -->
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-blue-200 mb-6 bg-blue-50/30">
-                    <div class="flex justify-between items-center mb-4 border-b border-blue-100 pb-2">
-                        <h2 class="text-xl font-semibold text-slate-700">
-                            <i class="far fa-calendar-alt text-blue-600 mr-2"></i>Bugünün Ders Programı <span class="text-sm font-normal text-slate-500">(Ahmet Baş)</span>
-                            <span id="todayName" class="text-blue-600 text-sm ml-2 font-normal"></span>
+                <!-- HAFTALIK DERS PROGRAMI KARTI -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <div class="flex justify-between items-center mb-4 border-b pb-3">
+                        <h2 class="text-xl font-bold text-amber-600 flex items-center gap-2">
+                            <i class="far fa-calendar-alt"></i> Ahmet Hoca - Haftalık Ders Programı
                         </h2>
-                        <button id="refreshScheduleBtn" class="text-sm text-blue-600 hover:text-blue-800 transition flex items-center gap-1">
+                        <button id="refreshScheduleBtn" class="text-sm text-blue-600 hover:text-blue-800 transition flex items-center gap-1 font-medium">
                             <i class="fas fa-sync-alt"></i> Yenile
                         </button>
                     </div>
-                    <div id="todaySchedule" class="space-y-4">
-                        <div class="text-center text-slate-500 py-4"><i class="fas fa-spinner fa-spin mr-2"></i>Program yükleniyor...</div>
+                    
+                    <div id="weeklyScheduleContainer" class="space-y-6">
+                        <div class="text-center text-slate-500 py-6"><i class="fas fa-spinner fa-spin mr-2"></i>Haftalık program yükleniyor...</div>
                     </div>
                 </div>
 
                 <!-- Son Ders Kayıtları Kartı -->
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 min-h-[500px]">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 min-h-[400px]">
                     <div class="flex justify-between items-center mb-6 border-b pb-2">
                         <h2 class="text-xl font-semibold text-slate-700">Son Ders Kayıtları</h2>
                         <select id="filterClass" class="text-sm border rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -149,7 +149,7 @@
         import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-        // APP 2: DERS TAKİP SİSTEMİ YAPILANDIRMASI
+        // APP 2: DERS TAKİP SİSTEMİ
         const firebaseConfig = {
             apiKey: "AIzaSyActPpb2TrOqKV4OwnxjJ36n33Xoh8ai0g",
             authDomain: "ahbaderskts.firebaseapp.com",
@@ -163,7 +163,7 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // APP 1: DERS PROGRAMI SİSTEMİ YAPILANDIRMASI (Okuma)
+        // APP 1: DERS PROGRAMI SİSTEMİ (Okuma)
         const progConfig = {
             apiKey: "AIzaSyDVZEEuWX9HbvsXo7_kdkpOoPgOT5D0mjA",
             projectId: "ahbadersprogsystem"
@@ -180,10 +180,6 @@
 
         document.getElementById('lessonDate').valueAsDate = new Date();
 
-        const gunler = ["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"];
-        const bugun = gunler[new Date().getDay()];
-        document.getElementById('todayName').innerText = `(${bugun})`;
-
         // AUTH
         onAuthStateChanged(auth, (user) => {
             if (user) {
@@ -191,7 +187,7 @@
                 mainApp.classList.remove('hidden');
                 loadClasses();
                 loadLogs();
-                loadTodaySchedule();
+                loadWeeklySchedule();
             } else {
                 loginScreen.classList.remove('hidden');
                 mainApp.classList.add('hidden');
@@ -390,16 +386,16 @@
 
         document.getElementById('filterClass').addEventListener('change', loadLogs);
 
-        // DERS PROGRAMI YÜKLEME (SADECE AHMET BAŞ)
-        async function loadTodaySchedule() {
-            const scheduleContainer = document.getElementById('todaySchedule');
-            scheduleContainer.innerHTML = '<div class="text-center text-slate-500 py-4"><i class="fas fa-spinner fa-spin mr-2"></i>Program yükleniyor...</div>';
+        // HAFTALIK DERS PROGRAMI YÜKLEME (AHMET BAŞ - HAFTA İÇİ VE HAFTA SONU TABLOLARI)
+        async function loadWeeklySchedule() {
+            const container = document.getElementById('weeklyScheduleContainer');
+            container.innerHTML = '<div class="text-center text-slate-500 py-6"><i class="fas fa-spinner fa-spin mr-2"></i>Haftalık ders programı yükleniyor...</div>';
 
             try {
                 const progQuery = query(collection(progDb, "ana_programlar"));
                 const progSnap = await getDocs(progQuery);
 
-                let todayLessons = [];
+                let myLessons = [];
 
                 if (!progSnap.empty) {
                     for (const mainDoc of progSnap.docs) {
@@ -407,52 +403,118 @@
                         const subSnap = await getDocs(subColRef);
                         
                         subSnap.forEach(itemDoc => {
-                            const lessonData = itemDoc.data();
-                            
-                            // Burada ogretmen isminde oluşabilecek küçük/büyük harf veya boşluk farklarını önlemek için güvenli kontrol yapıyoruz.
-                            const ogretmenAdi = lessonData.ogretmen ? lessonData.ogretmen.trim() : "";
-                            
-                            // SADECE BUGÜNÜN ve AHMET BAŞ'IN DERSLERİNİ ÇEK
-                            if (lessonData.gun === bugun && ogretmenAdi === "Ahmet Baş") {
-                                todayLessons.push(lessonData);
+                            const data = itemDoc.data();
+                            const teacher = data.ogretmen ? data.ogretmen.trim() : "";
+                            if (teacher === "Ahmet Baş") {
+                                myLessons.push(data);
                             }
                         });
                     }
                 }
 
-                if (todayLessons.length === 0) {
-                    scheduleContainer.innerHTML = `<div class="text-center text-slate-400 py-4 text-sm"><i class="fas fa-info-circle mr-1"></i>${bugun} günü için sana ait bir ders bulunamadı.</div>`;
+                if (myLessons.length === 0) {
+                    container.innerHTML = `<div class="text-center text-slate-400 py-6 text-sm"><i class="fas fa-info-circle mr-1"></i>Ahmet Baş için kayıtlı ders programı bulunamadı.</div>`;
                     return;
                 }
 
-                todayLessons.sort((a, b) => (a.saatIndex || 0) - (b.saatIndex || 0));
+                const weekdays = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma"];
+                const weekends = ["Cumartesi", "Pazar"];
 
-                scheduleContainer.innerHTML = '';
-                todayLessons.forEach(item => {
-                    const itemDiv = document.createElement('div');
-                    itemDiv.className = "flex items-center justify-between bg-white p-3 rounded-lg border border-blue-100 shadow-sm";
-                    itemDiv.innerHTML = `
-                        <div class="flex items-center gap-3">
-                            <span class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">
-                                ${item.saat || item.dersSaati || '#'}
-                            </span>
-                            <div>
-                                <h4 class="font-semibold text-slate-800 text-sm">${item.sinif || item.sinifAd || 'Sınıf Belirtilmedi'}</h4>
-                                <p class="text-xs text-slate-500">${item.ders || item.dersAdi || 'Ders'}</p>
+                const getTimeSlot = item => item.saatAraligi || item.saat || item.dersSaati || "Belirtilmedi";
+
+                const weekdayLessons = myLessons.filter(l => weekdays.includes(l.gun));
+                const weekendLessons = myLessons.filter(l => weekends.includes(l.gun));
+
+                const getSortedTimeSlots = (lessons) => {
+                    const slotsMap = new Map();
+                    lessons.forEach(l => {
+                        const slot = getTimeSlot(l);
+                        const idx = l.saatIndex !== undefined ? l.saatIndex : 999;
+                        if (!slotsMap.has(slot) || slotsMap.get(slot) > idx) {
+                            slotsMap.set(slot, idx);
+                        }
+                    });
+                    return Array.from(slotsMap.keys()).sort((a, b) => {
+                        const idxA = slotsMap.get(a);
+                        const idxB = slotsMap.get(b);
+                        if (idxA !== idxB) return idxA - idxB;
+                        return a.localeCompare(b);
+                    });
+                };
+
+                const weekdaySlots = getSortedTimeSlots(weekdayLessons);
+                const weekendSlots = getSortedTimeSlots(weekendLessons);
+
+                const buildTableHTML = (title, days, slots, lessons) => {
+                    if (slots.length === 0) return '';
+
+                    let html = `
+                        <div>
+                            <h3 class="text-base font-bold text-slate-800 mb-2">${title}</h3>
+                            <div class="overflow-x-auto rounded-lg border border-slate-300 shadow-sm">
+                                <table class="w-full text-sm text-center border-collapse bg-white">
+                                    <thead>
+                                        <tr class="bg-slate-700 text-white font-bold text-xs sm:text-sm">
+                                            <th class="p-2 sm:p-3 border-r border-slate-600 w-28 sm:w-36">Saat / Gün</th>
+                                            ${days.map(d => `<th class="p-2 sm:p-3 border-r border-slate-600 min-w-[100px]">${d}</th>`).join('')}
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-200">
+                    `;
+
+                    slots.forEach(slot => {
+                        html += `<tr class="hover:bg-slate-50 transition">`;
+                        html += `<td class="p-2 font-bold text-slate-800 bg-slate-50 border-r border-slate-200 text-xs sm:text-sm">${slot}</td>`;
+
+                        days.forEach(day => {
+                            const match = lessons.find(l => l.gun === day && getTimeSlot(l) === slot);
+                            if (match) {
+                                const sinif = match.sinif || match.sinifAd || '';
+                                const ders = match.ders || match.dersAdi || '';
+                                html += `
+                                    <td class="p-2 border-r border-slate-200">
+                                        <div class="font-extrabold text-slate-900 text-sm sm:text-base">${sinif}</div>
+                                        <div class="text-xs text-slate-500 font-medium">${ders}</div>
+                                    </td>
+                                `;
+                            } else {
+                                html += `<td class="p-2 border-r border-slate-200 text-slate-400 font-bold">-</td>`;
+                            }
+                        });
+
+                        html += `</tr>`;
+                    });
+
+                    html += `
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
-                        <span class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded"><i class="far fa-clock mr-1"></i>${item.saatAraligi || ''}</span>
                     `;
-                    scheduleContainer.appendChild(itemDiv);
-                });
+                    return html;
+                };
+
+                let finalHTML = '';
+                if (weekdaySlots.length > 0) {
+                    finalHTML += buildTableHTML("Hafta İçi", weekdays, weekdaySlots, weekdayLessons);
+                }
+                if (weekendSlots.length > 0) {
+                    finalHTML += buildTableHTML("Hafta Sonu", weekends, weekendSlots, weekendLessons);
+                }
+
+                if (!finalHTML) {
+                    container.innerHTML = `<div class="text-center text-slate-400 py-6 text-sm">Gösterilecek haftalık program bulunamadı.</div>`;
+                } else {
+                    container.innerHTML = finalHTML;
+                }
 
             } catch (err) {
-                console.error("Ders programı yükleme hatası:", err);
-                scheduleContainer.innerHTML = '<div class="text-center text-red-500 py-4 text-sm">Ders programı alınamadı.</div>';
+                console.error("Haftalık program yükleme hatası:", err);
+                container.innerHTML = '<div class="text-center text-red-500 py-6 text-sm">Haftalık ders programı yüklenirken bir hata oluştu.</div>';
             }
         }
 
-        document.getElementById('refreshScheduleBtn').addEventListener('click', loadTodaySchedule);
+        document.getElementById('refreshScheduleBtn').addEventListener('click', loadWeeklySchedule);
     </script>
 </body>
 </html>
